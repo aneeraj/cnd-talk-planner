@@ -35,7 +35,7 @@ render blueprints launch
 | File | Purpose |
 |---|---|
 | `index.html` | page, styles |
-| `app.js` | app logic |
+| `planner.js` | app logic |
 | `schedule-data.js` | talk data extracted from the official Sessionize feed |
 | `render.yaml` | Render deploy blueprint |
 
