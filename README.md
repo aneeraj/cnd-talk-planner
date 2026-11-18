@@ -7,6 +7,7 @@ An unofficial talk planner for [Cloud Native Denmark 2026](https://cloudnativede
 - Full schedule for both days — Main stage, Breakout, and Workshop rooms
 - One-tap "Add to plan" per talk; picks persist in `localStorage` (key `cnd2026-plan-v1`)
 - "My plan" drawer with copy-to-clipboard export and clear-all
+- **Shareable plan links** — "Share link" copies a `#plan=…` URL; whoever opens it sees your line-up and can merge it into their own picks (merge-only, never overwrites)
 - Time-clash detection — flags overlapping picks (e.g., a 90-minute workshop vs. parallel sessions)
 - Search by talk / speaker / tag, room filters, per-day pick counts
 - Compact cards by default; `☰ Detailed view` toggle (one-line excerpts, remembered in localStorage) and per-talk "more info" expansion

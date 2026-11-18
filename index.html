@@ -137,11 +137,14 @@
     .pick .rm:hover{color:var(--red)}
     .conflict-note{display:flex;gap:9px;background:#fff7e6;border:1.5px solid var(--amber);border-radius:12px;padding:11px 13px;font-size:12.5px;line-height:1.5;color:#7a5510;font-weight:600;margin-bottom:4px}
     .drawer-empty{border:1.5px dashed #dcd6c8;border-radius:14px;padding:36px 22px;text-align:center;color:var(--ash);font-size:14px;margin:auto 0}
-    .drawer-foot{border-top:1.5px solid var(--line);padding:14px 20px;display:flex;gap:10px;align-items:center}
-    .btn-soft{flex:1;border:1.5px solid #d9d2c3;background:#fff;border-radius:11px;padding:10px 12px;font:700 13.5px var(--font-body);color:var(--slate);cursor:pointer;transition:all .15s}
+    .drawer-foot{border-top:1.5px solid var(--line);padding:14px 20px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .btn-soft{flex:1 1 30%;border:1.5px solid #d9d2c3;background:#fff;border-radius:11px;padding:10px 12px;font:700 13.5px var(--font-body);color:var(--slate);cursor:pointer;transition:all .15s}
     .btn-soft:hover{border-color:var(--red);color:var(--red)}
     .btn-soft:disabled{opacity:.45;cursor:default;pointer-events:none}
     .btn-soft.danger:hover{border-color:var(--red)}
+    .btn-soft.primary{background:var(--red);border-color:var(--red);color:#fff}
+    .btn-soft.primary:hover{background:#b70f22;border-color:#b70f22;color:#fff}
+    .shared-note{display:flex;gap:9px;background:rgba(30,77,216,.07);border:1.5px solid rgba(30,77,216,.25);border-radius:12px;padding:11px 13px;font-size:12.5px;line-height:1.5;color:var(--harbor);font-weight:600;margin-bottom:4px}
     .saved-note{font:500 11px var(--font-mono);color:#a9a294;text-align:center;margin-top:8px}
 
     /* ---------- toast ---------- */
@@ -227,14 +230,17 @@
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="My plan">
   <div class="drawer-head">
-    <h2>My plan</h2>
+    <h2 id="drawerTitle">My plan</h2>
     <span class="n" id="drawerCount">0</span>
     <button class="drawer-close" id="closePlan" aria-label="Close plan">✕</button>
   </div>
   <div class="drawer-body" id="planBody"></div>
   <div class="drawer-foot">
     <button class="btn-soft" id="copyPlan">Copy plan</button>
+    <button class="btn-soft" id="sharePlan">Share link</button>
     <button class="btn-soft danger" id="clearPlan">Clear all</button>
+    <button class="btn-soft primary" id="importPlan" style="display:none">Add to my plan</button>
+    <button class="btn-soft" id="dismissShare" style="display:none">Not now</button>
   </div>
   <div class="saved-note" id="savedNote"></div>
 </aside>

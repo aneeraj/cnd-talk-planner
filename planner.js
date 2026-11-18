@@ -60,6 +60,7 @@ function renderDesc(text) {
 const state = { day: 0, room: 'all', q: '', picksOnly: false, showBreaks: true, detailed: false };
 let selected = loadPlan();
 const expanded = new Set();
+let sharedIds = null; // non-null when viewing a #plan=… link someone shared
 
 function loadPlan() {
   try {
@@ -189,8 +190,8 @@ function renderSchedule() {
 
 const overlaps = (a, b) => a.day === b.day && a.startsAt < b.endsAt && b.startsAt < a.endsAt;
 
-function conflictMap() {
-  const picks = [...selected].map(id => BY_ID.get(id)).filter(Boolean);
+function conflictMap(active = selected) {
+  const picks = [...active].map(id => BY_ID.get(id)).filter(Boolean);
   const map = new Map();
   for (let i = 0; i < picks.length; i++)
     for (let j = i + 1; j < picks.length; j++)
@@ -203,8 +204,8 @@ function conflictMap() {
 }
 
 /* Unique pairs of overlapping picks, for the plan summary. */
-function conflictPairs() {
-  const picks = [...selected].map(id => BY_ID.get(id)).filter(Boolean)
+function conflictPairs(active = selected) {
+  const picks = [...active].map(id => BY_ID.get(id)).filter(Boolean)
     .sort((a, b) => a.day - b.day || a.startsAt.localeCompare(b.startsAt));
   const pairs = [];
   for (let i = 0; i < picks.length; i++)
@@ -215,9 +216,9 @@ function conflictPairs() {
 
 /* ---------------- plan drawer ---------------- */
 
-function planText() {
-  const picks = [...selected].map(id => BY_ID.get(id)).filter(Boolean);
-  const lines = ['My plan — Cloud Native Denmark 2026', ''];
+function planText(active = selected, title = 'My plan') {
+  const picks = [...active].map(id => BY_ID.get(id)).filter(Boolean);
+  const lines = [`${title} — Cloud Native Denmark 2026`, ''];
   DAYS.forEach(d => {
     const dayPicks = picks.filter(p => p.day === d.index).sort((a, b) => a.startsAt.localeCompare(b.startsAt));
     if (!dayPicks.length) return;
@@ -229,13 +230,24 @@ function planText() {
 }
 
 function renderPlan() {
-  const n = selected.size;
+  const shared = !!sharedIds;
+  const active = shared ? sharedIds : selected;
+  const picks = [...active].map(id => BY_ID.get(id)).filter(Boolean)
+    .sort((a, b) => a.day - b.day || a.startsAt.localeCompare(b.startsAt));
+  const n = picks.length;
+
+  $('drawerTitle').textContent = shared ? 'Shared plan' : 'My plan';
   const cnt = $('planCount');
-  cnt.textContent = n;
-  cnt.classList.toggle('zero', !n);
+  cnt.textContent = selected.size; // header badge always tracks the visitor's own picks
+  cnt.classList.toggle('zero', !selected.size);
   $('drawerCount').textContent = n;
   $('copyPlan').disabled = !n;
-  $('clearPlan').disabled = !n;
+  $('clearPlan').disabled = !selected.size;
+
+  $('sharePlan').style.display = shared ? 'none' : '';
+  $('clearPlan').style.display = shared ? 'none' : '';
+  $('importPlan').style.display = shared ? '' : 'none';
+  $('dismissShare').style.display = shared ? '' : 'none';
 
   const body = $('planBody');
   if (!n) {
@@ -243,12 +255,13 @@ function renderPlan() {
     return;
   }
 
-  const conflicts = conflictMap();
-  const pairs = conflictPairs();
-  const picks = [...selected].map(id => BY_ID.get(id)).filter(Boolean)
-    .sort((a, b) => a.day - b.day || a.startsAt.localeCompare(b.startsAt));
+  const conflicts = conflictMap(active);
+  const pairs = conflictPairs(active);
 
   let html = '';
+  if (shared) {
+    html += `<div class="shared-note"><span>👋</span><span>Someone shared this plan with you. Add it to your own plan (your existing picks are kept), or take a look and close it.</span></div>`;
+  }
   if (pairs.length) {
     html += `<div class="conflict-note"><span>⚠️</span><span>Time clash — these picked talks run in parallel:<br/>${
       pairs.map(([a, b]) => `· “${esc(a.title)}” ↔ “${esc(b.title)}”`).join('<br/>')
@@ -261,7 +274,7 @@ function renderPlan() {
     html += `<div class="pick ${clash ? 'warn' : ''}">
       <span class="tt">${hhmm(p.startsAt)}–${hhmm(p.endsAt)}</span>
       <span class="mid"><b>${clash ? '⚠️ ' : ''}${esc(p.title)}</b><small>${esc(p.room)}${p.speakers.length ? ' · ' + esc(p.speakers.join(', ')) : ''}</small></span>
-      <button class="rm" data-action="remove" data-id="${p.id}" aria-label="Remove ${esc(p.title)}">✕</button>
+      ${shared ? '' : `<button class="rm" data-action="remove" data-id="${p.id}" aria-label="Remove ${esc(p.title)}">✕</button>`}
     </div>`;
   });
   body.innerHTML = html;
@@ -296,6 +309,25 @@ function renderAll() {
   renderChips();
   renderSchedule();
   renderPlan();
+}
+
+/* ---------------- share links ----------------
+   A plan travels in the URL hash (#plan=id,id,…), so sharing stays
+   fully client-side — no server ever sees it. */
+
+function shareUrl() {
+  return location.origin + location.pathname + '#plan=' + [...selected].join(',');
+}
+
+function parseSharedPlan() {
+  const m = location.hash.match(/^#plan=([0-9,]+)/);
+  if (!m) return null;
+  const ids = new Set(m[1].split(',').filter(id => BY_ID.has(id)));
+  return ids.size ? ids : null;
+}
+
+function clearSharedHash() {
+  history.replaceState(null, '', location.pathname + location.search);
 }
 
 /* ---------------- events ---------------- */
@@ -362,7 +394,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(
 
 /* copy plan */
 $('copyPlan').addEventListener('click', async () => {
-  const text = planText();
+  const text = planText(sharedIds || selected, sharedIds ? 'Shared plan' : 'My plan');
   try {
     await navigator.clipboard.writeText(text);
     toast('Plan copied to clipboard');
@@ -373,6 +405,48 @@ $('copyPlan').addEventListener('click', async () => {
     catch (e2) { toast('Copy failed — select the text manually'); }
     ta.remove();
   }
+});
+
+/* share link — copies a #plan=… URL the recipient can open */
+$('sharePlan').addEventListener('click', async () => {
+  if (!selected.size) return;
+  const url = shareUrl();
+  try {
+    await navigator.clipboard.writeText(url);
+    toast('Share link copied — anyone who opens it sees this plan');
+  } catch (err) {
+    const ta = document.createElement('textarea');
+    ta.value = url; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); toast('Share link copied — anyone who opens it sees this plan'); }
+    catch (e2) { toast('Copy failed — link: ' + url); }
+    ta.remove();
+  }
+});
+
+/* import a shared plan into the visitor's own picks (merge, never clobber) */
+$('importPlan').addEventListener('click', () => {
+  if (!sharedIds) return;
+  let added = 0, already = 0;
+  sharedIds.forEach(id => {
+    if (selected.has(id)) already++;
+    else { selected.add(id); added++; }
+  });
+  const ok = savePlan();
+  updateSavedNote(ok);
+  sharedIds = null;
+  clearSharedHash();
+  renderAll();
+  toast(added
+    ? `Added ${added} talk${added > 1 ? 's' : ''} to your plan${already ? ` — ${already} you'd already picked` : ''}`
+    : 'These were all already in your plan');
+});
+
+/* dismiss a shared plan */
+$('dismissShare').addEventListener('click', () => {
+  sharedIds = null;
+  clearSharedHash();
+  closeDrawer();
+  renderAll();
 });
 
 /* clear plan */
@@ -387,8 +461,12 @@ $('clearPlan').addEventListener('click', () => {
 
 /* ---------------- boot ---------------- */
 
+sharedIds = parseSharedPlan();
 renderAll();
 updateSavedNote();
-if (selected.size) {
+if (sharedIds) {
+  openDrawer();
+  toast(`Viewing a shared plan — ${sharedIds.size} talk${sharedIds.size > 1 ? 's' : ''}. Nothing is saved until you add it.`);
+} else if (selected.size) {
   toast(`Welcome back — restored your ${selected.size} saved talk${selected.size > 1 ? 's' : ''}`);
 }
