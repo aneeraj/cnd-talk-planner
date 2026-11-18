@@ -1,0 +1,5 @@
+# local test harness — not part of the deployed site
+mobile-test.html
+
+# macOS noise
+.DS_Store

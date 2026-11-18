@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Talk Planner · Cloud Native Denmark 2026</title>
+  <meta name="description" content="Pick the talks you want to attend at Cloud Native Denmark 2026. Your plan is saved in your browser." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b1e3f'/%3E%3Ctext x='32' y='42' font-family='monospace' font-size='26' font-weight='700' fill='white' text-anchor='middle'%3ECN%3C/text%3E%3Ccircle cx='50' cy='18' r='6' fill='%23e0132a'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --red:#e0132a; --electric:#1e4dd8; --harbor:#13347c; --sky:#7fb8c9; --amber:#f4b942;
+      --coral:#ff6b4a; --midnight:#0b1e3f; --ink:#061531; --bone:#f7f5f0; --sand:#f5e6d3;
+      --fog:#b9c4d4; --slate:#3a4558; --ash:#6b7689; --line:#e7e2d8;
+      --font-head:'Space Grotesk',system-ui,sans-serif;
+      --font-body:'Manrope',system-ui,sans-serif;
+      --font-mono:'JetBrains Mono',ui-monospace,monospace;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:var(--bone);color:var(--ink);font-family:var(--font-body);-webkit-font-smoothing:antialiased}
+    button{font-family:inherit}
+
+    /* ---------- header ---------- */
+    header{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-bottom:1.5px solid var(--line)}
+    .header-in{max-width:1180px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:14px}
+    .brand{display:flex;align-items:center;gap:12px;min-width:0}
+    .brand-mark{width:38px;height:38px;border-radius:11px;background:var(--midnight);color:#fff;display:flex;align-items:center;justify-content:center;font:700 14px var(--font-mono);position:relative;flex-shrink:0}
+    .brand-mark::after{content:'';position:absolute;top:7px;right:7px;width:6px;height:6px;border-radius:50%;background:var(--red)}
+    .brand h1{font:600 17px/1.15 var(--font-head);margin:0;letter-spacing:-.01em}
+    .brand small{display:block;font:600 11px var(--font-body);color:var(--ash);letter-spacing:.08em;text-transform:uppercase;margin-top:3px}
+    .header-spacer{flex:1}
+    .btn-plan{display:flex;align-items:center;gap:9px;background:var(--midnight);color:#fff;border:none;border-radius:999px;padding:10px 18px;font:600 14px var(--font-head);cursor:pointer;transition:background .15s,transform .15s;white-space:nowrap}
+    .btn-plan:hover{background:var(--ink)}
+    .btn-plan:active{transform:scale(.97)}
+    .btn-plan .count{min-width:22px;height:22px;border-radius:999px;background:var(--red);font:600 12px/22px var(--font-mono);text-align:center;padding:0 5px}
+    .btn-plan .count.zero{background:#3a4558}
+
+    /* ---------- hero strip ---------- */
+    .hero{max-width:1180px;margin:26px auto 0;padding:0 20px}
+    .hero h2{font:600 clamp(24px,4vw,34px)/1.15 var(--font-head);margin:0 0 8px;letter-spacing:-.02em}
+    .hero h2 em{font-style:normal;color:var(--red)}
+    .hero p{margin:0;color:var(--ash);font-size:15px;max-width:640px;line-height:1.6}
+    .hero .ls{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--line);border-radius:999px;padding:3px 10px;font:600 11.5px var(--font-mono);color:var(--slate);vertical-align:2px}
+
+    /* ---------- toolbar ---------- */
+    .toolbar{max-width:1180px;margin:22px auto 0;padding:0 20px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .tabs{display:inline-flex;background:#efebe2;border-radius:13px;padding:4px;gap:2px}
+    .tab{border:0;background:transparent;padding:8px 14px;border-radius:10px;font:600 14px var(--font-head);color:var(--ash);cursor:pointer;display:flex;gap:8px;align-items:center;transition:color .15s}
+    .tab:hover{color:var(--slate)}
+    .tab.active{background:#fff;color:var(--ink);box-shadow:0 1px 5px rgba(6,21,49,.14)}
+    .tab .cnt{background:var(--red);color:#fff;font:600 10.5px var(--font-mono);border-radius:999px;padding:2px 7px;line-height:1.5}
+    .tab .cnt[data-zero="1"]{background:#c9c2b2;color:#fff}
+    .tab .lbl-min{display:none}
+    .search{flex:1;min-width:180px;max-width:360px;display:flex;align-items:center;gap:8px;background:#fff;border:1.5px solid var(--line);border-radius:13px;padding:9px 13px;transition:border-color .15s}
+    .search:focus-within{border-color:var(--electric)}
+    .search svg{flex-shrink:0;opacity:.45}
+    .search input{border:0;outline:0;flex:1;font:500 14px var(--font-body);color:var(--ink);background:transparent;min-width:0}
+    .search input::placeholder{color:#a9a294}
+    .chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:100%}
+    .chip{border:1.5px solid var(--line);background:#fff;color:var(--slate);border-radius:999px;padding:7px 13px;font:600 13px var(--font-body);cursor:pointer;transition:all .15s}
+    .chip:hover{border-color:var(--fog)}
+    .chip.on{background:var(--midnight);border-color:var(--midnight);color:#fff}
+    .chip-sep{width:1.5px;height:22px;background:var(--line);margin:0 4px}
+    .day-date{display:none}
+
+    /* ---------- schedule ---------- */
+    main{max-width:1180px;margin:18px auto 40px;padding:0 20px}
+    .slot{display:grid;grid-template-columns:88px 1fr;gap:18px;align-items:start;padding:12px 0}
+    .slot-time{text-align:right;padding-top:8px;font:600 13.5px var(--font-mono);color:var(--slate);position:sticky;top:84px}
+    .slot-time small{display:block;font-weight:400;color:#a9a294;font-size:11px;margin-top:2px}
+    .slot-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
+    .svc{grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:9px 14px;border:1.5px dashed #dcd6c8;border-radius:12px;color:var(--ash);font-size:13px;font-weight:600;flex-wrap:wrap;row-gap:4px}
+    .svc .t{font:500 12px var(--font-mono);color:#a9a294;margin-left:auto;white-space:nowrap}
+
+    .talk{background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;transition:border-color .15s,box-shadow .15s,transform .15s}
+    .talk:hover{box-shadow:0 8px 26px rgba(6,21,49,.09);transform:translateY(-1px)}
+    .talk.picked{border-color:var(--red);background:#fffdfc}
+    .talk-head{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+    .badge{font:700 10.5px var(--font-body);letter-spacing:.05em;text-transform:uppercase;padding:4px 8px;border-radius:6px}
+    .b-keynote{background:rgba(224,19,42,.09);color:var(--red)}
+    .b-session{background:rgba(30,77,216,.09);color:var(--electric)}
+    .b-workshop{background:rgba(127,184,201,.25);color:var(--harbor)}
+    .b-lightning{background:rgba(244,185,66,.25);color:#8a6210}
+    .b-plenary{background:#eef0f3;color:var(--slate)}
+    .room-pill{font:500 11px var(--font-mono);color:var(--ash);background:#f4f1ea;padding:4px 8px;border-radius:6px;margin-left:auto;white-space:nowrap}
+    .talk h3{margin:0;font:600 16.5px/1.3 var(--font-head);letter-spacing:-.01em}
+    .speakers{font-size:13px;font-weight:600;color:var(--slate)}
+    .speakers span{color:#c5bfae;padding:0 5px}
+    .tags{display:flex;flex-wrap:wrap;gap:5px}
+    .tag{font:600 10.5px var(--font-body);color:var(--ash);background:#f4f1ea;border-radius:5px;padding:3px 7px}
+    .desc{color:var(--ash);font-size:13.5px;line-height:1.6;margin:0}
+    .desc.clamped{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+    .desc p{margin:0 0 8px}
+    .desc p:last-child{margin:0}
+    .desc ul{margin:0 0 8px;padding-left:18px}
+    .desc li{margin:2px 0}
+    .more-btn{align-self:flex-start;border:0;background:none;color:var(--electric);font:700 12px var(--font-body);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:3px}
+    .talk-foot{display:flex;align-items:center;gap:10px;margin-top:auto;padding-top:4px;flex-wrap:wrap;row-gap:8px}
+    .time-chip{font:600 12px var(--font-mono);color:var(--slate);white-space:nowrap}
+    .time-chip b{color:var(--red)}
+    .btn-pick{display:inline-flex;align-items:center;gap:7px;margin-left:auto;padding:8px 14px;border-radius:999px;border:1.5px solid #d9d2c3;background:#fff;color:var(--slate);font:700 13px var(--font-body);cursor:pointer;transition:all .15s;white-space:nowrap}
+    .btn-pick:hover{border-color:var(--red);color:var(--red)}
+    .btn-pick:active{transform:scale(.96)}
+    .talk.picked .btn-pick{background:var(--red);border-color:var(--red);color:#fff}
+    .official{font:600 11.5px var(--font-body);color:#a9a294;text-decoration:none;white-space:nowrap}
+    .official:hover{color:var(--electric)}
+
+    .empty{border:1.5px dashed #dcd6c8;border-radius:16px;padding:44px 20px;text-align:center;color:var(--ash);font-size:14.5px;background:transparent}
+    .empty b{color:var(--slate)}
+
+    footer{max-width:1180px;margin:0 auto 46px;padding:18px 20px;color:#a9a294;font-size:12.5px;line-height:1.6;border-top:1.5px solid var(--line)}
+    footer a{color:var(--slate)}
+
+    /* ---------- drawer ---------- */
+    .scrim{position:fixed;inset:0;background:rgba(6,21,49,.48);opacity:0;pointer-events:none;transition:opacity .25s;z-index:50}
+    .scrim.show{opacity:1;pointer-events:auto}
+    .drawer{position:fixed;top:0;right:0;height:100dvh;width:min(450px,100vw);background:#fff;z-index:60;transform:translateX(105%);transition:transform .3s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;box-shadow:-24px 0 60px rgba(6,21,49,.2)}
+    .drawer.open{transform:none}
+    .drawer-head{padding:18px 20px;border-bottom:1.5px solid var(--line);display:flex;align-items:center;gap:10px}
+    .drawer-head h2{margin:0;font:600 19px var(--font-head);letter-spacing:-.01em}
+    .drawer-head .n{background:var(--red);color:#fff;border-radius:999px;font:600 12px var(--font-mono);padding:3px 9px}
+    .drawer-close{margin-left:auto;border:0;background:#f4f1ea;width:34px;height:34px;border-radius:10px;font:600 16px var(--font-body);color:var(--slate);cursor:pointer;transition:background .15s}
+    .drawer-close:hover{background:#eae5d9}
+    .drawer-body{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:8px}
+    .day-head{font:700 11px var(--font-body);letter-spacing:.1em;text-transform:uppercase;color:#a9a294;margin:10px 0 2px}
+    .day-head:first-child{margin-top:0}
+    .pick{display:flex;gap:10px;padding:12px 13px;border:1.5px solid var(--line);border-radius:13px;align-items:flex-start;background:#fff}
+    .pick.warn{border-color:var(--amber);background:#fffaf0}
+    .pick .tt{font:600 11.5px var(--font-mono);color:var(--slate);white-space:nowrap;padding-top:2px}
+    .pick .mid{min-width:0;flex:1}
+    .pick .mid b{display:block;font:600 14px/1.35 var(--font-head);letter-spacing:-.01em}
+    .pick .mid small{color:var(--ash);font-size:12px}
+    .pick .rm{border:0;background:none;color:#c5bfae;font:600 15px var(--font-body);cursor:pointer;padding:2px 4px;border-radius:6px;transition:color .15s}
+    .pick .rm:hover{color:var(--red)}
+    .conflict-note{display:flex;gap:9px;background:#fff7e6;border:1.5px solid var(--amber);border-radius:12px;padding:11px 13px;font-size:12.5px;line-height:1.5;color:#7a5510;font-weight:600;margin-bottom:4px}
+    .drawer-empty{border:1.5px dashed #dcd6c8;border-radius:14px;padding:36px 22px;text-align:center;color:var(--ash);font-size:14px;margin:auto 0}
+    .drawer-foot{border-top:1.5px solid var(--line);padding:14px 20px;display:flex;gap:10px;align-items:center}
+    .btn-soft{flex:1;border:1.5px solid #d9d2c3;background:#fff;border-radius:11px;padding:10px 12px;font:700 13.5px var(--font-body);color:var(--slate);cursor:pointer;transition:all .15s}
+    .btn-soft:hover{border-color:var(--red);color:var(--red)}
+    .btn-soft:disabled{opacity:.45;cursor:default;pointer-events:none}
+    .btn-soft.danger:hover{border-color:var(--red)}
+    .saved-note{font:500 11px var(--font-mono);color:#a9a294;text-align:center;margin-top:8px}
+
+    /* ---------- toast ---------- */
+    .toast{position:fixed;left:50%;bottom:30px;transform:translate(-50%,16px);opacity:0;background:var(--ink);color:#fff;border-radius:12px;padding:11px 18px;font:600 13.5px var(--font-body);z-index:70;pointer-events:none;transition:all .3s cubic-bezier(.2,.8,.2,1);max-width:88vw;text-align:center}
+    .toast.show{opacity:1;transform:translate(-50%,0)}
+
+    @media(max-width:720px){
+      .header-in{padding:12px 16px}
+      .hero,.toolbar,main,footer{padding-left:16px;padding-right:16px}
+      .tabs{width:100%}
+      .tab{flex:1;justify-content:center;min-width:0}
+      .tab .lbl-full{display:none}
+      .tab .lbl-min{display:inline}
+      .day-date{display:block;margin-left:auto;align-self:center;font:600 11px var(--font-mono);color:var(--ash)}
+      .search input{font-size:16px} /* ≥16px stops iOS Safari from zooming on focus */
+      .slot{grid-template-columns:1fr;gap:8px;padding:10px 0}
+      .slot-time{text-align:left;padding-top:0;position:static}
+      .slot-cards{grid-template-columns:minmax(0,1fr)}
+      .btn-plan span.lbl{display:none}
+      .hero .ls{display:none}
+    }
+
+    /* roomier hit areas on touch devices */
+    @media(pointer:coarse){
+      .rm{padding:6px 10px}
+      .more-btn{padding:6px 2px}
+      .official{padding:4px 2px}
+      .chip{padding:9px 15px}
+    }
+
+    /* respect reduced-motion: drawer, scrim and toast snap instead of sliding */
+    @media(prefers-reduced-motion:reduce){
+      .drawer,.scrim,.toast{transition:none}
+      .talk:hover{transform:none}
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-in">
+    <div class="brand">
+      <div class="brand-mark">CN</div>
+      <div>
+        <h1>Talk Planner</h1>
+        <small>Cloud Native Denmark · Nov 19–20, 2026</small>
+      </div>
+    </div>
+    <div class="header-spacer"></div>
+    <button class="btn-plan" id="openPlan" aria-label="Open my plan">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+      <span class="lbl">My plan</span>
+      <span class="count zero" id="planCount">0</span>
+    </button>
+  </div>
+</header>
+
+<section class="hero">
+  <h2>Pick the talks <em>you</em> want to catch.</h2>
+  <p>Browse the full two-day schedule below and add talks to your personal plan.
+     Selections live in <span class="ls">
+     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+     localStorage</span> — saved in your browser only, no account, no server. Come back any time and your plan will be here.</p>
+</section>
+
+<div class="toolbar">
+  <div class="tabs" id="dayTabs" role="tablist" aria-label="Conference days"></div>
+  <div class="day-date" id="dayDate"></div>
+  <label class="search">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+    <input id="searchInput" type="search" placeholder="Search talks, speakers, tags…" autocomplete="off" />
+  </label>
+  <div class="chips" id="chips"></div>
+</div>
+
+<main id="schedule"></main>
+
+<footer>
+  Unofficial planner for <a href="https://cloudnativedenmark.dk/schedule" target="_blank" rel="noreferrer">Cloud Native Denmark 2026</a> (Nov 19–20).
+  Talk data mirrors the official schedule. Your picks are stored only in this browser via <code>localStorage</code> — clear your browser data and they're gone, so export your plan before switching devices.
+</footer>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="My plan">
+  <div class="drawer-head">
+    <h2>My plan</h2>
+    <span class="n" id="drawerCount">0</span>
+    <button class="drawer-close" id="closePlan" aria-label="Close plan">✕</button>
+  </div>
+  <div class="drawer-body" id="planBody"></div>
+  <div class="drawer-foot">
+    <button class="btn-soft" id="copyPlan">Copy plan</button>
+    <button class="btn-soft danger" id="clearPlan">Clear all</button>
+  </div>
+  <div class="saved-note" id="savedNote"></div>
+</aside>
+
+<div class="toast" id="toast"></div>
+
+<script src="schedule-data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

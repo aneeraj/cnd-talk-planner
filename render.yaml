@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: cnd-talk-planner
+    runtime: static
+    buildCommand: echo "Nothing to build — fully static site"
+    staticPublishPath: ./
+    pullRequestPreviewsEnabled: false
