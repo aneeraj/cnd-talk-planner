@@ -7,7 +7,9 @@ An unofficial talk planner for [Cloud Native Denmark 2026](https://cloudnativede
 - Full schedule for both days — Main stage, Breakout, and Workshop rooms
 - One-tap "Add to plan" per talk; picks persist in `localStorage` (key `cnd2026-plan-v1`)
 - "My plan" drawer with copy-to-clipboard export and clear-all
-- **Shareable plan links** — "Share link" copies a `#plan=…` URL; whoever opens it sees your line-up and can merge it into their own picks (merge-only, never overwrites)
+- **Shareable plan links** — "Share link" copies a `#plan=…` URL; whoever opens it sees your line-up and can merge it into their own picks (merge-only, never overwrites). A scannable **QR code** of the link renders in the drawer.
+- **Now / Up next** — on the live conference day, talks currently on (Europe/Copenhagen time) get a pulsing `NOW` badge and the next slot gets `UP NEXT`.
+- **Installable & offline** — PWA manifest + service worker: add it to your home screen and the schedule keeps working when the venue Wi-Fi doesn't.
 - Time-clash detection — flags overlapping picks (e.g., a 90-minute workshop vs. parallel sessions)
 - Search by talk / speaker / tag, room filters, per-day pick counts
 - Compact cards by default; `☰ Detailed view` toggle (one-line excerpts, remembered in localStorage) and per-talk "more info" expansion
@@ -39,6 +41,9 @@ render blueprints launch
 | `index.html` | page, styles |
 | `planner.js` | app logic |
 | `schedule-data.js` | talk data extracted from the official Sessionize feed |
+| `qrcode.js` | vendored QR encoder ([qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator), MIT) — used for plan-share QRs, fully offline |
+| `sw.js` | service worker (network-first, offline fallback) |
+| `manifest.webmanifest` + `icon-*.png` | PWA install support |
 | `render.yaml` | Render deploy blueprint |
 
 ---

@@ -12,6 +12,7 @@ const DAYS = SCHEDULE_DATA.map((d, i) => {
   const date = new Date(d.date);
   return {
     index: i,
+    date: d.date, // full ISO date of the conference day
     label: 'Day ' + (i + 1),
     dateLabel: date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }),
     sessions: d.sessions.map(s => ({ ...s, day: i }))
@@ -37,6 +38,38 @@ const durationMin = s => (new Date(s.endsAt) - new Date(s.startsAt)) / 60000;
 const durLabel = s => { const m = durationMin(s); return m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ' ' + (m % 60) + 'm' : ''}` : m + 'm'; };
 const fmtLabel = s => s.format || 'Plenary';
 const svcIcon = t => /registration|breakfast/i.test(t) ? '🎟️' : /coffee/i.test(t) ? '☕' : /lunch/i.test(t) ? '🍽️' : /end|wrap|close/i.test(t) ? '🏁' : '📌';
+
+/* ---------------- now / up next (venue timezone) ---------------- */
+
+/* Current wall-clock time in Copenhagen — talks are stored in venue-local time. */
+function cphParts(now = new Date()) {
+  const p = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Copenhagen', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+  }).formatToParts(now);
+  const g = t => (p.find(x => x.type === t) || {}).value || '';
+  return { date: g('year') + '-' + g('month') + '-' + g('day'), minutes: (+g('hour')) * 60 + (+g('minute')) };
+}
+const minsOf = t => (+t.slice(11, 13)) * 60 + (+t.slice(14, 16));
+
+/* Which talks are live right now, and which are up next, on the shown day. */
+function computeNowNext(now = new Date()) {
+  const cph = cphParts(now);
+  const res = { now: new Set(), next: new Set() };
+  const day = DAYS[state.day];
+  if (day.date.slice(0, 10) !== cph.date) return res; // shown day isn't today at the venue
+  const talks = day.sessions.filter(s => !s.isService);
+  let nextStart = null;
+  talks.forEach(s => {
+    const st = minsOf(s.startsAt), en = minsOf(s.endsAt);
+    if (st <= cph.minutes && cph.minutes < en) res.now.add(String(s.id));
+    else if (st > cph.minutes && (nextStart === null || st < nextStart)) nextStart = st;
+  });
+  if (nextStart !== null) talks.forEach(s => { if (minsOf(s.startsAt) === nextStart) res.next.add(String(s.id)); });
+  return res;
+}
+const nnKey = nn => [...nn.now].join(',') + '>' + [...nn.next].join(',');
+let lastNNKey = null;
 
 /* Light markdown-ish rendering, like the official site: paragraphs + bullet lists. */
 function renderDesc(text) {
@@ -139,14 +172,17 @@ function slotsForDay(di) {
   return slots;
 }
 
-function talkCard(s) {
+function talkCard(s, nn) {
   const id = String(s.id);
   const picked = selected.has(id);
   const open = expanded.has(id);
+  const isNow = nn && nn.now.has(id);
+  const isNext = nn && nn.next.has(id);
   return `
-  <article class="talk ${picked ? 'picked' : ''}" data-id="${id}">
+  <article class="talk ${picked ? 'picked' : ''} ${isNow ? 'now' : ''} ${isNext ? 'next' : ''}" data-id="${id}">
     <div class="talk-head">
       <span class="badge b-${slug(fmtLabel(s))}">${esc(fmtLabel(s))}</span>
+      ${isNow ? '<span class="live-badge">● NOW</span>' : isNext ? '<span class="upnext-badge">UP NEXT</span>' : ''}
       <span class="room-pill">${esc(s.room)}</span>
     </div>
     <h3>${esc(s.title)}</h3>
@@ -168,6 +204,8 @@ function talkCard(s) {
 }
 
 function renderSchedule() {
+  const nn = computeNowNext();
+  lastNNKey = nnKey(nn);
   const slots = slotsForDay(state.day).map(sl => ({ ...sl, items: sl.items.filter(visible) })).filter(sl => sl.items.length);
   if (!slots.length) {
     $('schedule').innerHTML = `<div class="empty"><b>Nothing matches.</b><br/>Try clearing the search or filters${state.picksOnly ? ' — or add some talks first' : ''}.</div>`;
@@ -180,7 +218,7 @@ function renderSchedule() {
       <div class="slot-time">${hhmm(sl.items[0].startsAt)}<small>${svc.length && !talks.length ? hhmm(svc[0].endsAt) : ''}</small></div>
       <div class="slot-cards">
         ${svc.map(s => `<div class="svc"><span>${svcIcon(s.title)}</span><span>${esc(s.title)}</span><span class="t">${hhmm(s.startsAt)}–${hhmm(s.endsAt)}</span></div>`).join('')}
-        ${talks.map(talkCard).join('')}
+        ${talks.map(t => talkCard(t, nn)).join('')}
       </div>
     </div>`;
   }).join('');
@@ -216,6 +254,28 @@ function conflictPairs(active = selected) {
 
 /* ---------------- plan drawer ---------------- */
 
+/* Draw the share-link QR onto the drawer canvas. */
+function drawQr(url) {
+  if (typeof qrcode !== 'function') return false;
+  try {
+    const qr = qrcode(0, 'M'); // 0 = auto-size
+    qr.addData(url);
+    qr.make();
+    const canvas = $('qrCanvas');
+    const ctx = canvas.getContext('2d');
+    const n = qr.getModuleCount();
+    const cell = Math.floor(canvas.width / (n + 4)); // 2-module quiet zone
+    const off = Math.floor((canvas.width - cell * n) / 2);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#061531';
+    for (let r = 0; r < n; r++)
+      for (let c = 0; c < n; c++)
+        if (qr.isDark(r, c)) ctx.fillRect(off + c * cell, off + r * cell, cell, cell);
+    return true;
+  } catch (e) { return false; }
+}
+
 function planText(active = selected, title = 'My plan') {
   const picks = [...active].map(id => BY_ID.get(id)).filter(Boolean);
   const lines = [`${title} — Cloud Native Denmark 2026`, ''];
@@ -248,6 +308,11 @@ function renderPlan() {
   $('clearPlan').style.display = shared ? 'none' : '';
   $('importPlan').style.display = shared ? '' : 'none';
   $('dismissShare').style.display = shared ? '' : 'none';
+
+  // QR of the share link — own-plan mode with at least one pick
+  const showQr = !shared && selected.size > 0 && drawQr(shareUrl());
+  $('qrWrap').hidden = !showQr;
+  if (showQr) $('qrHost').textContent = location.host + '/#plan=…';
 
   const body = $('planBody');
   if (!n) {
@@ -464,6 +529,18 @@ $('clearPlan').addEventListener('click', () => {
 sharedIds = parseSharedPlan();
 renderAll();
 updateSavedNote();
+
+/* keep NOW / UP NEXT fresh while the page stays open */
+setInterval(() => {
+  if (nnKey(computeNowNext()) !== lastNNKey) renderSchedule();
+}, 30000);
+
+/* PWA: offline support via service worker (https or localhost only) */
+if ('serviceWorker' in navigator &&
+    (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
 if (sharedIds) {
   openDrawer();
   toast(`Viewing a shared plan — ${sharedIds.size} talk${sharedIds.size > 1 ? 's' : ''}. Nothing is saved until you add it.`);
