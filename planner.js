@@ -57,20 +57,27 @@ function renderDesc(text) {
 
 /* ---------------- state ---------------- */
 
-const state = { day: 0, room: 'all', q: '', picksOnly: false, showBreaks: true };
+const state = { day: 0, room: 'all', q: '', picksOnly: false, showBreaks: true, detailed: false };
 let selected = loadPlan();
 const expanded = new Set();
 
 function loadPlan() {
   try {
     const raw = JSON.parse(localStorage.getItem(LS_KEY));
-    if (raw && Array.isArray(raw.ids)) return new Set(raw.ids.map(String));
+    if (raw && Array.isArray(raw.ids)) {
+      if (raw.view === 'detailed') state.detailed = true; // remembered view preference
+      return new Set(raw.ids.map(String));
+    }
   } catch (e) { /* corrupted or unavailable */ }
   return new Set();
 }
 function savePlan() {
   try {
-    localStorage.setItem(LS_KEY, JSON.stringify({ ids: [...selected], savedAt: new Date().toISOString() }));
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      ids: [...selected],
+      view: state.detailed ? 'detailed' : 'compact',
+      savedAt: new Date().toISOString()
+    }));
     return true;
   } catch (e) { return false; }
 }
@@ -93,13 +100,17 @@ function renderTabs() {
   $('dayDate').textContent = `${d.label} · ${d.dateLabel} 2026`;
 }
 
+/* One-line excerpt for detailed view: first meaningful (non-bullet) line. */
+const excerpt = t => t.split('\n').map(l => l.trim()).find(l => l && !/^[-*•]/.test(l)) || '';
+
 function renderChips() {
   const rooms = [['all', 'All rooms'], ...ROOM_ORDER.map(r => [r, r])];
   $('chips').innerHTML =
     rooms.map(([v, l]) => `<button class="chip ${state.room === v ? 'on' : ''}" data-action="room" data-room="${esc(v)}">${esc(l)}</button>`).join('') +
     `<span class="chip-sep"></span>` +
     `<button class="chip ${state.picksOnly ? 'on' : ''}" data-action="picksOnly">★ My picks only</button>` +
-    `<button class="chip ${state.showBreaks ? 'on' : ''}" data-action="breaks">Breaks & meals</button>`;
+    `<button class="chip ${state.showBreaks ? 'on' : ''}" data-action="breaks">Breaks & meals</button>` +
+    `<button class="chip ${state.detailed ? 'on' : ''}" data-action="view" title="Show a one-line excerpt of each talk">☰ Detailed view</button>`;
 }
 
 function visible(s) {
@@ -140,6 +151,7 @@ function talkCard(s) {
     <h3>${esc(s.title)}</h3>
     ${s.speakers.length ? `<div class="speakers">${s.speakers.map(esc).join('<span>·</span>')}</div>` : ''}
     ${s.tags.length ? `<div class="tags">${s.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}
+    ${state.detailed && !open && s.description ? `<p class="desc excerpt">${esc(excerpt(s.description))}</p>` : ''}
     ${s.description ? `<button class="more-btn" data-action="expand" data-id="${id}" aria-expanded="${open}">${open ? '▴ hide info' : '▾ more info'}</button>` : ''}
     ${open && s.description ? `<p class="desc">${renderDesc(s.description)}</p>` : ''}
     <div class="talk-foot">
@@ -326,6 +338,10 @@ document.addEventListener('click', e => {
     renderChips(); renderSchedule();
   } else if (act === 'breaks') {
     state.showBreaks = !state.showBreaks;
+    renderChips(); renderSchedule();
+  } else if (act === 'view') {
+    state.detailed = !state.detailed;
+    savePlan(); // remember the preference like the picks
     renderChips(); renderSchedule();
   }
 });
