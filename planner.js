@@ -130,7 +130,6 @@ function slotsForDay(di) {
 function talkCard(s) {
   const id = String(s.id);
   const picked = selected.has(id);
-  const long = (s.description || '').length > 150;
   const open = expanded.has(id);
   return `
   <article class="talk ${picked ? 'picked' : ''}" data-id="${id}">
@@ -141,8 +140,8 @@ function talkCard(s) {
     <h3>${esc(s.title)}</h3>
     ${s.speakers.length ? `<div class="speakers">${s.speakers.map(esc).join('<span>·</span>')}</div>` : ''}
     ${s.tags.length ? `<div class="tags">${s.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}
-    ${s.description ? `<p class="desc ${open ? '' : 'clamped'}">${renderDesc(s.description)}</p>
-      ${long ? `<button class="more-btn" data-action="expand" data-id="${id}">${open ? 'Show less' : 'Show more'}</button>` : ''}` : ''}
+    ${s.description ? `<button class="more-btn" data-action="expand" data-id="${id}" aria-expanded="${open}">${open ? '▴ hide info' : '▾ more info'}</button>` : ''}
+    ${open && s.description ? `<p class="desc">${renderDesc(s.description)}</p>` : ''}
     <div class="talk-foot">
       <span class="time-chip">${hhmm(s.startsAt)}<b>–</b>${hhmm(s.endsAt)} · ${durLabel(s)}</span>
       <button class="btn-pick" data-action="pick" data-id="${id}" aria-pressed="${picked}">
@@ -150,7 +149,7 @@ function talkCard(s) {
           ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> In my plan`
           : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg> Add to plan`}
       </button>
-      <a class="official" href="${officialUrl(s)}" target="_blank" rel="noreferrer">details ↗</a>
+      <a class="official" href="${officialUrl(s)}" target="_blank" rel="noreferrer">official ↗</a>
     </div>
   </article>`;
 }
