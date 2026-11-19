@@ -71,6 +71,56 @@ function computeNowNext(now = new Date()) {
 const nnKey = nn => [...nn.now].join(',') + '>' + [...nn.next].join(',');
 let lastNNKey = null;
 
+/* ---------------- 5-minute reminders for picked talks ---------------- */
+
+/* Picked talks starting within the next 5 minutes (venue time, today only). */
+function dueReminders(now = new Date()) {
+  const cph = cphParts(now);
+  const due = [];
+  [...selected].forEach(id => {
+    const s = BY_ID.get(id);
+    if (!s || s.isService) return;
+    if (DAYS[s.day].date.slice(0, 10) !== cph.date) return; // not today at the venue
+    const remaining = minsOf(s.startsAt) - cph.minutes;
+    if (remaining > 0 && remaining <= 5) due.push({ session: s, remaining });
+  });
+  return due;
+}
+
+const remindedIds = new Set();
+
+function checkReminders(now = new Date()) {
+  if (!state.reminders) return;
+  dueReminders(now).forEach(({ session, remaining }) => {
+    const key = String(session.id);
+    if (remindedIds.has(key)) return;
+    remindedIds.add(key);
+    fireReminder(session, remaining);
+  });
+}
+
+/* Notify via the service worker (works in the installed PWA / background tab);
+   fall back to a plain Notification, then to an in-page toast. */
+async function fireReminder(session, remaining) {
+  const when = `in ${remaining} minute${remaining > 1 ? 's' : ''}`;
+  const title = `${when} · ${session.room}`; // the stage they need to head to
+  const body = session.title + (session.speakers.length ? ` — ${session.speakers.join(', ')}` : '');
+  try {
+    if (!('Notification' in window) || Notification.permission !== 'granted') {
+      toast(`🔔 ${title} — ${body}`);
+      return;
+    }
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (reg) {
+      await reg.showNotification(title, { body, tag: 'cnd-' + session.id, icon: './icon-192.png' });
+    } else {
+      new Notification(title, { body, tag: 'cnd-' + session.id, icon: './icon-192.png' });
+    }
+  } catch (e) {
+    toast(`🔔 ${title} — ${body}`);
+  }
+}
+
 /* Light markdown-ish rendering, like the official site: paragraphs + bullet lists. */
 function renderDesc(text) {
   const out = [];
@@ -90,7 +140,7 @@ function renderDesc(text) {
 
 /* ---------------- state ---------------- */
 
-const state = { day: 0, room: 'all', q: '', picksOnly: false, showBreaks: true, detailed: false };
+const state = { day: 0, room: 'all', q: '', picksOnly: false, showBreaks: true, detailed: false, reminders: false };
 let selected = loadPlan();
 const expanded = new Set();
 let sharedIds = null; // non-null when viewing a #plan=… link someone shared
@@ -100,6 +150,7 @@ function loadPlan() {
     const raw = JSON.parse(localStorage.getItem(LS_KEY));
     if (raw && Array.isArray(raw.ids)) {
       if (raw.view === 'detailed') state.detailed = true; // remembered view preference
+      if (raw.reminders) state.reminders = true;          // remembered reminders preference
       return new Set(raw.ids.map(String));
     }
   } catch (e) { /* corrupted or unavailable */ }
@@ -110,6 +161,7 @@ function savePlan() {
     localStorage.setItem(LS_KEY, JSON.stringify({
       ids: [...selected],
       view: state.detailed ? 'detailed' : 'compact',
+      reminders: !!state.reminders,
       savedAt: new Date().toISOString()
     }));
     return true;
@@ -144,7 +196,8 @@ function renderChips() {
     `<span class="chip-sep"></span>` +
     `<button class="chip ${state.picksOnly ? 'on' : ''}" data-action="picksOnly">★ My picks only</button>` +
     `<button class="chip ${state.showBreaks ? 'on' : ''}" data-action="breaks">Breaks & meals</button>` +
-    `<button class="chip ${state.detailed ? 'on' : ''}" data-action="view" title="Show a one-line excerpt of each talk">☰ Detailed view</button>`;
+    `<button class="chip ${state.detailed ? 'on' : ''}" data-action="view" title="Show a one-line excerpt of each talk">☰ Detailed view</button>` +
+    `<button class="chip ${state.reminders ? 'on' : ''}" data-action="reminders" title="Get a heads-up 5 minutes before your picked talks start">🔔 Reminders</button>`;
 }
 
 function visible(s) {
@@ -440,6 +493,24 @@ document.addEventListener('click', e => {
     state.detailed = !state.detailed;
     savePlan(); // remember the preference like the picks
     renderChips(); renderSchedule();
+  } else if (act === 'reminders') {
+    state.reminders = !state.reminders;
+    savePlan(); // remember the preference like the picks
+    renderChips();
+    if (state.reminders) {
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission().then(p => {
+          toast(p === 'granted'
+            ? "Reminders on — you'll be nudged 5 minutes before each picked talk"
+            : 'Browser notifications blocked — in-page alerts will be used instead');
+        });
+      } else {
+        toast("Reminders on — you'll be nudged 5 minutes before each picked talk (while this page is open)");
+      }
+      checkReminders(); // in case something is already within 5 minutes
+    } else {
+      toast('Reminders off');
+    }
   }
 });
 
@@ -530,10 +601,12 @@ sharedIds = parseSharedPlan();
 renderAll();
 updateSavedNote();
 
-/* keep NOW / UP NEXT fresh while the page stays open */
+/* keep NOW / UP NEXT fresh and fire 5-minute reminders while the page is open */
 setInterval(() => {
   if (nnKey(computeNowNext()) !== lastNNKey) renderSchedule();
+  checkReminders();
 }, 30000);
+checkReminders(); // catch anything already inside the 5-minute window
 
 /* PWA: offline support via service worker (https or localhost only) */
 if ('serviceWorker' in navigator &&

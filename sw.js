@@ -45,3 +45,14 @@ self.addEventListener('fetch', e => {
       )
   );
 });
+
+/* Tapping a "talk starting soon" notification focuses the planner */
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(wins => {
+      for (const w of wins) { if ('focus' in w) return w.focus(); }
+      return clients.openWindow('./');
+    })
+  );
+});

@@ -9,6 +9,7 @@ An unofficial talk planner for [Cloud Native Denmark 2026](https://cloudnativede
 - "My plan" drawer with copy-to-clipboard export and clear-all
 - **Shareable plan links** — "Share link" copies a `#plan=…` URL; whoever opens it sees your line-up and can merge it into their own picks (merge-only, never overwrites). A scannable **QR code** of the link renders in the drawer.
 - **Now / Up next** — on the live conference day, talks currently on (Europe/Copenhagen time) get a pulsing `NOW` badge and the next slot gets `UP NEXT`.
+- **🔔 Reminders** — opt-in chip; 5 minutes before each picked talk you get a system notification with the stage to head to (via the service worker — works in the installed PWA and background tabs; in-page alert fallback on iOS).
 - **Installable & offline** — PWA manifest + service worker: add it to your home screen and the schedule keeps working when the venue Wi-Fi doesn't.
 - Time-clash detection — flags overlapping picks (e.g., a 90-minute workshop vs. parallel sessions)
 - Search by talk / speaker / tag, room filters, per-day pick counts
