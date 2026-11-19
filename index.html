@@ -157,7 +157,12 @@
     .btn-soft.primary:hover{background:#b70f22;border-color:#b70f22;color:#fff}
     .shared-note{display:flex;gap:9px;background:rgba(30,77,216,.07);border:1.5px solid rgba(30,77,216,.25);border-radius:12px;padding:11px 13px;font-size:12.5px;line-height:1.5;color:var(--harbor);font-weight:600;margin-bottom:4px}
     .saved-note{font:500 11px var(--font-mono);color:#a9a294;text-align:center;margin-top:8px}
-    .qr-wrap{display:flex;gap:14px;align-items:center;padding:14px 20px;border-top:1.5px solid var(--line)}
+    .qr-wrap{border-top:1.5px solid var(--line)}
+    .qr-wrap summary{list-style:none;display:flex;align-items:center;gap:8px;padding:12px 20px;font:700 13px var(--font-body);color:var(--slate);cursor:pointer;user-select:none}
+    .qr-wrap summary::-webkit-details-marker{display:none}
+    .qr-wrap summary::after{content:'▾';margin-left:auto;color:var(--ash);transition:transform .2s}
+    .qr-wrap[open] summary::after{transform:rotate(180deg)}
+    .qr-body{display:flex;gap:14px;align-items:center;padding:0 20px 14px}
     #qrCanvas{border-radius:10px;flex-shrink:0;border:1px solid var(--line)}
     .qr-cap{font-size:12.5px;color:var(--slate);font-weight:700;line-height:1.6}
     .qr-cap .mono{font:500 11px var(--font-mono);color:var(--ash);word-break:break-all}
@@ -251,10 +256,13 @@
     <button class="drawer-close" id="closePlan" aria-label="Close plan">✕</button>
   </div>
   <div class="drawer-body" id="planBody"></div>
-  <div class="qr-wrap" id="qrWrap" hidden>
-    <canvas id="qrCanvas" width="132" height="132" aria-label="QR code of your share link"></canvas>
-    <div class="qr-cap">Scan to open this plan<br/><span id="qrHost" class="mono"></span></div>
-  </div>
+  <details class="qr-wrap" id="qrWrap" hidden>
+    <summary>Scan QR to share this plan</summary>
+    <div class="qr-body">
+      <canvas id="qrCanvas" width="132" height="132" aria-label="QR code of your share link"></canvas>
+      <div class="qr-cap">Point a phone camera at it<br/><span id="qrHost" class="mono"></span></div>
+    </div>
+  </details>
   <div class="drawer-foot">
     <button class="btn-soft" id="copyPlan">Copy plan</button>
     <button class="btn-soft" id="sharePlan">Share link</button>
